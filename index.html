@@ -357,7 +357,7 @@
 
     /* ===== WAVEFORM CARD ===== */
     .waveform-card { padding: 28px; margin-top: 20px; background: #ffffff; }
-    #waveCanvas, #scoreTrendCanvas {
+    #waveCanvas {
       width: 100%;
       height: 160px;
       display: block;
@@ -646,14 +646,6 @@
       <i class="fa-solid fa-chart-line"></i>LIVE TELEMETRY WAVEFORM
     </h5>
     <canvas id="waveCanvas"></canvas>
-  </div>
-
-  <!-- AI Health Score Trend -->
-  <div class="waveform-card glass">
-    <h5 class="panel-title">
-      <i class="fa-solid fa-brain"></i>AI HEALTH SCORE TREND
-    </h5>
-    <canvas id="scoreTrendCanvas"></canvas>
   </div>
 
   <!-- Incident History -->
@@ -1083,88 +1075,13 @@
     }
   }
 
-  // ===== AI Health Score Trend Canvas =====
-  const trendCanvas = document.getElementById('scoreTrendCanvas');
-  const trendCtx = trendCanvas.getContext('2d');
-
-  function resizeTrendCanvas() {
-    trendCanvas.width = trendCanvas.offsetWidth * window.devicePixelRatio;
-    trendCanvas.height = trendCanvas.offsetHeight * window.devicePixelRatio;
-    trendCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
-  }
-  resizeTrendCanvas();
-  window.addEventListener('resize', resizeTrendCanvas);
-
-  function drawScoreTrend(scores) {
-    const w = trendCanvas.offsetWidth;
-    const h = trendCanvas.offsetHeight;
-    trendCtx.clearRect(0, 0, trendCanvas.width, trendCanvas.height);
-
-    trendCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    trendCtx.lineWidth = 1;
-    for (let i = 0; i < 10; i++) {
-      trendCtx.beginPath();
-      trendCtx.moveTo(0, (h / 10) * i);
-      trendCtx.lineTo(w, (h / 10) * i);
-      trendCtx.stroke();
-    }
-
-    if (scores.length < 2) return;
-
-    const minScore = Math.min(...scores);
-    const maxScore = Math.max(...scores);
-    const range = maxScore - minScore || 1;
-
-    trendCtx.strokeStyle = '#a78bfa';
-    trendCtx.lineWidth = 2.5;
-    trendCtx.beginPath();
-    scores.forEach((val, i) => {
-      const x = (i / (scores.length - 1)) * w;
-      const normalized = (val - minScore) / range;
-      const y = h - (normalized * h * 0.8) - h * 0.1;
-      if (i === 0) trendCtx.moveTo(x, y);
-      else trendCtx.lineTo(x, y);
-    });
-    trendCtx.stroke();
-
-    if (minScore < 0 && maxScore > 0) {
-      const zeroY = h - (((0 - minScore) / range) * h * 0.8) - h * 0.1;
-      trendCtx.strokeStyle = 'rgba(248, 113, 113, 0.5)';
-      trendCtx.lineWidth = 1;
-      trendCtx.setLineDash([4, 4]);
-      trendCtx.beginPath();
-      trendCtx.moveTo(0, zeroY);
-      trendCtx.lineTo(w, zeroY);
-      trendCtx.stroke();
-      trendCtx.setLineDash([]);
-    }
-  }
-
-  async function fetchScoreHistory() {
-    try {
-      const res = await fetch(`${FIREBASE_BASE_URL}/score_history.json`);
-      if (!res.ok) throw new Error("HTTP error " + res.status);
-      const data = await res.json();
-      if (!data) return;
-
-      const entries = Object.values(data).sort(
-        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-      );
-      drawScoreTrend(entries.map((e) => e.score));
-    } catch (err) {
-      console.error("Score history fetch error:", err);
-    }
-  }
-
   // ===== Loop Timers =====
   setInterval(fetchAIPrediction, 2000);
-  setInterval(fetchScoreHistory, 30000);
   setInterval(drawWaveform, 100);
   setInterval(fetchTelemetry, 1000);
 
   // Initial Execution
   fetchAIPrediction();
-  fetchScoreHistory();
   fetchTelemetry();
   showToast('ระบบเชื่อมต่อสำเร็จ', 'success');
 </script>
